@@ -1,0 +1,285 @@
+\chapter{ARMYC}\label{ch:simulador_arm}
+
+Para dar respuesta a la solución planteada en el capítulo \ref{ch:solution}, se tuvieron que tomar en cuenta las características de la arquitectura.
+
+En este capítulo se describe el diseño obtenido, el desarrollo y por último las pruebas que se han hecho con este software funcionando.
+
+\section{Arquitectura}
+
+El producto final debe de ser sencillo de usar para diseñadores de sistemas, para ello buscamos las siguientes características en el simulador.
+
+\begin{itemize}
+\item Rapidez
+\item Modularidad
+\item Multitarea
+\item Flexibilidad
+\item Facilidad de uso
+\end{itemize}
+
+Para cumplir con estas características se debían encontrar las herramientas adecuadas siendo muy importante la elección de un lenguaje de programación.
+
+Por las características se tuvieron en cuenta los siguientes lenguajes.
+
+\begin{itemize}
+\item C
+\item Python
+\item Objective C
+\item Java
+\end{itemize}
+
+Inicialmente se hicieron algunas pruebas en el lenguaje de programación Python, sin embargo pronto se notó que la rapidez de ejecución no era la adecuada, pues tomaba demasiado tiempo la ejecución de las instrucciones de ARM. Debido a esto se decidió escribir algunos módulos en C y para tener una mayor flexibilidad, se optó por tener las características de un lenguaje orientado a objetos, y para esto se utilizó el lenguaje Objective C.
+
+Las propiedades de orientación a objetos fueron muy útiles para facilitar la implementación de dispositivos de ARM, pues se podía heredar la funcionalidad básica y la interfaz con el objeto sería conocida para el módulo del procesador, tomando en cuenta estas necesidades se llegó a un diseño, los diagramas de clases se muestran en el apéndice \ref{ch:clases}.
+
+En el diagrama \ref{Flo:clases_principal} se muestran las clases que hacen funcionar al simulador, pasemos ahora a describir la funcionalidad de estas clases.
+
+\begin{itemize}
+\item \textbf{ARMCore} Contiene la información del procesador, como son los registros de cada uno de los modos, una lista de dispositivos (memory), los coprocesadores y los mecanismos de sincronización necesarios para funcionar en su propio hilo.
+\item \textbf{ARMMemoryInterface} Contiene una interfaz de memoria a los dispositivos, debido a que la arquitectura ARM se comunica con sus dispositivos por medio de la memoria, esta interfaz logra hacer lo mismo con sus dispositivos, esta interfaz está pensada para la MMU.
+\item \textbf{ARMDevice} Esta clase implementa la interfaz ARMMemoryInterface, y tiene la funcionalidad básico de un dispositivo, almacena en memoria el tamaño que el dispositivo desea usar, y provee las funciones para leer y escribir de ella.
+\item \textbf{ARMCoproc} Esta clase define la funcionalidad básica para los coprocesadores de ARM, estos coprocesadores pueden ser de cualquier tipo, tienen la peculiaridad de que sólo se pueden mandar a llamar conciertas operaciones definidas en los métodos de esta clase.
+\item \textbf{ARMInstruction} Hay varios conjuntos de instrucciones ARM, y puede cambiar con el tiempo, por ello es importante definir una manera de que el conjunto de instrucciones esté separado del simulador, para ello se utilizó la clase ARMInstruction, con ella se puede definir un conjunto de instrucciones diferente para cada ejecución del simulador.
+\item \textbf{ARMAddressing} De la misma manera que se pueden definir modos de direccionamiento para las instrucciones, puesto que pueden ser diferentes dependiendo del conjunto de instrucciones.
+\end{itemize}
+
+Habiendo solucionado el problema de correr al simulador de manera nativa, se vuelve necesario definir una manera de integrar los dispositivos, para ello se han determinado 3 formas posibles.
+
+\begin{itemize}
+\item Extender de la clase ARMDevice en Objective-C
+\item Implementar la interfaz ARMMemoryInterface en Objective-C
+\item Escribir clase de Python con los métodos writeByte y readByte
+\end{itemize}
+
+Para facilitar el desarrollo se decidió utilizar una interfaz con Python, y el diseño de la interfaz con Python se muestra en el diagrama de clases \ref{Flo:clases_helper_python}.
+
+Aquí se muestran las clases que se comunican con Python, las clases \emph{ARMPythonDevice}, \emph{ARMPythonEvent} y \emph{ARMPythonEventListener} definen mecanismos de comunicación con Python por medio de su API de C. Estas clases definen la comunicación con Python y al mismo tiempo se pueden comunicar con Objective-C por lo que hacen posible la programación de los dispositivos en el lenguaje de programación Python.
+
+Por último se tiene la parte del simulador que está implementado puramente con Python esto es:
+
+\begin{itemize}
+\item Interfaz de debug
+\item Hilo de eventos
+\end{itemize}
+
+Para ésta funcionalidad se definieron las clases que se muestran en el diagrama \ref{Flo:clases_python}.
+
+La creación de un hilo de eventos se debe a que muchos de los dispositivos necesitan una interfaz gráfica en la computadora, y para la mayoría de los firmware actuales es necesario ejecutar los eventos gráficos en el hilo principal. Éste hilo de eventos se encarga de eso ejecuta los eventos principales en el hilo principal cada cierto tiempo.
+
+Para facilitar la programación de todos estos proyectos, se utilizó autotools, el cual crea los Makefiles y se encarga de generar bibliotecas dinámicas en Unix que permiten cargar dispositivos, conjuntos de instrucciones y modos de direccionamiento de manera dinámica.
+
+\section{Desarrollo}
+
+El desarrollo de éste simulador se llevaron a cabo 3 etapas diferentes, primero el desarrollo de una utilería que incluyera estructuras de datos comunes y manejo de memoria, el desarrollo del simulador propiamente y el desarrollo de el conjunto de instrucciones y modos de direccionamiento para éste simulador.
+
+A continuación se describen a detalle cada una de estas etapas del desarrollo.
+
+\subsection{libch}
+
+Para el desarrollo de este simulador se decidió utilizar el firmware de Objective-C, sin embargo el uso de Objective-C suponía varias dificultades que hay que sobrellevar sobre otros lenguajes de programación siendo la más importante un mecanismo para alojar y desalojar memoria, así como listas, tablas hash, etc. Como todo esto iba a ser muy necesario a lo largo de todo el proyecto se procedió al desarrollo de un framework que tomara en cuenta todos estos detalles, y se llegó a la implementación de las siguientes clases:
+
+\begin{itemize}
+\item \textbf{ChObject} Este es el objeto base, del cual heredan todos los demás objetos en libch y en el simulador.
+\item \textbf{ChString} Esta clase define las cadenas de Objective C, define las operaciones básicas dentro de ello, como substrings, concatenación, etc.
+\item \textbf{ChConstantString} Clase que se genera cuando se escribe la notación especial \emph{@``cadena''} para hacer que la tome es necesario escribir el siguiente parámetro al compilador \emph{-fconstant-string-class=ChConstantString}
+\item \textbf{ChInteger} Clase que define a un número y sus operaciones básicas, y hace posible que sea una llave de un hash map.
+\item \textbf{ChDictionary} Esta clase funciona como un hashmap, las llaves y los valores deben de ser objetos que hereden de ChObject.
+\item \textbf{ChArray} Clase que define un arreglo estático, se usa para poder pasar como ChObject a las clases que necesitan argumentos.
+\item \textbf{ChList} Lista mutable que permite la asignación de cualquier objeto que herede de la clase ChObject.
+\item \textbf{ChConf} Clase que lee un archivo de configuración, se utiliza para escribir en un archivo la configuración del simulador y ejecutarlo posteriormente, para la implementación de esta clase se utilizaron los generadores \ac{FLEX} y \ac{YACC}
+
+\end{itemize}
+
+La parte más importante de este desarrollo está en el ChObject y su manera de manejar la memoria, pues para ello al hacer la llamada al método alloc, se almacena el espacio del objeto y además un número que lleva la cuenta de cuantas referencias al objeto hay, esto se puede ver en el programa \ref{ChObject.m}, de las líneas 6 a la 24.
+
+Para incrementar la cuenta se llama al método retain, éste incrementa la cuenta como se ve de las líneas 38 a 51, y para liberarlo se utiliza el método release, el cual inicia en la línea 53; como se puede ver en la línea 70 cuando la cuenta llega a 0 el objeto se libera llamando al método free.
+
+\subsection{Simulador y libarmyc}
+
+Con libch fue mucho más sencillo desarrollar el simulador, en él no hubo mayor dificultad sin embargo conviene revisar algunos conceptos.
+
+\begin{itemize}
+\item ARMyC no contiene ningún dispositivo en él.
+\item ARMyC no contiene ninguna instrucción en él.
+\end{itemize}
+
+Estos dos conceptos son importantes, debido a que el diseño de ARMyC está orientado a simular cualquier conjunto de instrucciones de ARM que se desee. Las funcionalidades que se pueden obtener de éste simulador son las siguientes:
+
+\begin{itemize}
+\item Modelo del procesador
+\item Búsqueda de instrucciones
+\item Interfaz con coprocesadores
+\item Interfaz con dispositivos
+\end{itemize}
+
+La interfaz con los coprocesadores, los dispositivos y el modelo del procesadores se discutieron en la sección anterior.
+
+La búsqueda de las instrucciones se hace de una manera muy sencilla, puesto que cada instrucción debe tener ciertos bits en 1, otros en 0 y otros son irrelevantes, para solucionar esto se realiza la siguiente operación:
+
+\begin{equation}
+res = [(instcode \& mask) == expected]
+\end{equation}
+
+Donde \textbf{instcode} se refiere al código de la instrucción en el binario, \textbf{mask} es una máscara que define los bits que interesan para la instrucción, y \textbf{expected} se refiere al valor que deben de tener esos bits.
+
+Con esta operación se puede saber si la instrucción corresponde o no a la que se desea ejecutar, y para que el simulador no tenga que volver a ejecutar la operación se guarda en un caché de instrucciones.
+
+\subsection{libat91sam9260}
+
+Como se comentaba en la sección anterior ARMYC no contiene un conjunto de instrucción es ni dispositivos, por lo que hay que especificarlos de otra manera. 
+
+En este caso se programó el conjunto de instrucciones \textbf{ARMv5} que incluye el controlador \textbf{at91sam9260}.
+
+En este caso se desarrollaron los siguientes componentes en ObjectiveC:
+
+\begin{itemize}
+\item Conjunto de instrucciones y modos de direccionamiento ARMv5
+\item Memoria data-flash
+\end{itemize}
+
+Los componentes desarrollados en Python son:
+
+\begin{itemize}
+\item USART
+\item Control USB
+\item LcdMx
+\end{itemize}
+
+Estos dispositivos se especifican más a fondo en la siguiente sección.
+
+\section{Pruebas}
+
+El caso de estudio para la fase de pruebas con ARMYC empezó con ejemplos muy fáciles como declarar variables, asignar valores, operaciones matemáticas, etc. Para demostrar la efectividad de nuestro simulador, se probó un código más complejo, este código cuenta con una lista, la cual llenamos con números del 0 al 9 para finalmente desplegar todos los elementos de la lista. Debido a que no contamos con las librerías de C, para la asignación de memoria a nuestra lista se tuvo que implementar una función que hiciera lo mismo que la función llamada malloc() de C. También se desarrollaron las funciones print\_num() y put\_char() para implementar la función dprintf(), que simulara el comportamiento del printf() proporcionado por C. Por último se trabajo con un variable estática, ya que este tipo de variables fueron las que causaron más problemas al inicio. El código de este programa se puede observar en el programa \ref{prueba.c}, a continuación se puede observar la salida del simulador ARMYC cuando se ejecuta este código:
+
+\begin{verbatim}
+Var estatica 0x10874:6, Var lista:1
+Var estatica 0x10874:6, Var lista:2
+Var estatica 0x10874:6, Var lista:3
+Var estatica 0x10874:6, Var lista:4
+Var estatica 0x10874:6, Var lista:5
+Var estatica 0x10874:6, Var lista:6
+Var estatica 0x10874:6, Var lista:7
+Var estatica 0x10874:6, Var lista:8
+Var estatica 0x10874:6, Var lista:9
+Var estatica 0x10874:6, Var lista:10
+\end{verbatim}
+
+Como se puede observar el simulador ARMYC ejecuta este código sin problemas, para llegar a esto tuvimos que pasar por una fase de depuración detalla, con la cual esperamos haber encontrado y arreglado el mayor numero de bugs. Esta fase de depuración aún no está finalizada, estamos conscientes de que se debe seguir probando al simulador, para que en un futuro ARMYC sea una herramienta confiable.
+
+En la prueba anterior se verificó el funcionamiento del dispositivo USART, pero también se hicieron pruebas de otros dos dispositivos que pertenecen al simulador como son: Control y LCD. A continuación se explica detalladamente estos dos dispositivos.
+
+\subsection{Control ó Joystick}
+
+Para la implementación de los Controles junto con la tarjeta y el simulador se desarrollo una librería para Python con la cual obtenemos la información más importante de los controles para la administración de los mismos. Con esta librería podemos obtener que botones están presionados y hacia qué dirección se están moviendo los joystick. Esto se probó con un el código del programa \ref{joy.py}
+
+\lstinputlisting[caption={Pruebas nativas de joystick},label={joy.py},language=Python]{content/joy.py}
+
+Esta librería implementada en el simulador nos permite generar un dispositivo externo que administre los controles que son conectados. A partir de un hilo que siempre está leyendo las acciones del control para que en el momento que se detecte un movimiento en el joystick o que presionan un botón este sea escrito en la memoria. En la memoria se escribe un número dependiendo de la dirección en la que se apretó, a continuación se muestra la tabla de relación entre los números y las direcciones establecida por nosotros \ref{tab:control-desc}
+
+\begin{table}
+\begin{tabular}{|c|c|}
+\textbf{Numero de acción escrito en la memoria} & \textbf{Dirección} \\
+-1 & No se presionó nada \\
+0 & Arriba \\
+1 & Arriba-Derecha \\
+2 & Derecha \\
+3 & Derecha-Abajo \\
+4 & Abajo \\
+5 & Abajo-Izquierda\\
+6 & Izquierda\\
+7 & Izquierda-Arriba\\
+\end{tabular}
+\caption{\label{tab:control-desc}Descripción del control}
+\end{table}
+
+\subsection{LCD}
+
+Para la implementación de un LCD en el simulador utilizamos un dispositivo desarrollado en QT. Este dispositivo recibe comandos muy fáciles para la implementación del video en 2 dimensiones. Los comandos se describen en las figuras \ref{tab:lcd-desc-1} y \ref{tab:lcd-desc-2}
+
+\begin{table}
+\begin{longtable}{|c|c|c|c|c|c|p{4 cm}|}
+\multicolumn{6}{|c|}{Comandos escritos en la memoria del LCD}
+&
+\multirow{2}{*}{Resultados}
+\\
+\multicolumn{4}{|c|}{Registros de entrada} &
+\multicolumn{2}{|c|}{Registros de salida} &
+\\
+1 & X & Y & ID & ID\_OB &  & 
+Crea y dibuja un objeto en la posición(x, y) con la imagen que tenga el id especificado en el archivo de configuración y escribe el id del objeto creado.
+\newline
+X = posición en x\newline
+Y = posición en y\newline
+ID = identificador de la imagen\newline
+ID\_OB = identificador del objeto creado
+\\
+\hline
+2 & ID & D & T & &  & 
+
+Genera una animación de un objeto ya creado con anterioridad en la dirección que se le especifique y el número de unidades que se le indique.\newline
+
+ID = identificador del objeto a mover\newline
+D = Dirección en la que se desea mover\newline
+T = Numero de unidades de movimiento\newline
+\\
+\hline
+3 & ID &  &  & X & Y & 
+
+
+Proporciona la posición actual del objeto ya creado.\newline
+
+ID = identificador del objeto\newline
+X = Posición actual en x\newline
+Y = Posición actual en Y
+\\
+\end{longtable}
+\caption{\label{tab:lcd-desc-1}Descripción del LCD Parte 1}
+\end{table}
+
+\begin{table}
+\begin{longtable}{|c|c|c|c|c|c|p{4 cm}|}
+\multicolumn{6}{|c|}{Comandos escritos en la memoria del LCD}
+&
+\multirow{2}{*}{Resultados}
+\\
+\multicolumn{4}{|c|}{Registros de entrada} &
+\multicolumn{2}{|c|}{Registros de salida} &
+\\
+4 & ID & X & Y & & & 
+
+Mueve un objeto a la posición(x, y) especificada.\newline
+
+ID = identificador del objeto\newline
+X = Posición en x\newline
+Y = Posición en y
+
+\\
+\hline
+5 & ID &  &  & W & H & 
+
+Proporciona las dimensiones(width, height) del objeto ya creado.\newline
+
+ID = Identificador del objeto\newline
+W = Ancho\newline
+H = Alto
+
+
+\\
+
+\end{longtable}
+\caption{\label{tab:lcd-desc-2}Descripción del LCD Parte 2}
+\end{table}
+
+Para facilitar la administración de imágenes que se desean agregar se genera un archivo de configuración que contiene todas las imágenes y de esta manera en lugar de poner toda la ruta cuando se genera un objeto solo se pone el índice que le corresponde en el archivo de configuración, el archivo de configuración tiene la siguiente estructura:
+
+\begin{verbatim}
+
+[images]
+1=jugador1.png
+2=jugador2.png
+3=pelota.png
+4=campo.png
+
+\end{verbatim}
+
+Para la implementación de un LCD con la tarjeta se tomo de base el dispositivo LCD anterior pero como la tarjeta no cuenta con QT ni con una pantalla, todos los comandos serán mandados atreves de un socket. Este socket tiene comunicación con un nuevo archivo LCD que de lo único que se encarga es de pintar todo lo que se le indique dependiendo del comando recibido. La gran diferencia entre el LCD del simulador y el LCD del socket es que el LCD del simulador lee-escribe la memoria del core y el LCD del socket lee-escribe en el socket para que la tarjeta se encargue de escribir-leer en la memoria. 
+

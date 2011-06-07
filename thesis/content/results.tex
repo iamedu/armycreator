@@ -1,0 +1,94 @@
+\chapter{Resultados, Discusi\'on y Conclusi\'ones}\label{ch:resultados}
+
+Se tiene un ambiente funcional que permite el desarrollo de aplicaciones para la plataforma ARM, faltan partes importantes como el desarrollo de una MMU, que podrían llevarse a cabo en futuros proyectos.
+
+El conocimiento que se requiere para utilizar este framework es elevado, pues se requiere conocer la plataforma, sin embargo se ha tratado de hacer lo más sencillo posible y crearlo como herramientas separadas que dan pie a crear una interfaz gráfica que facilite aún más el uso de la plataforma.
+
+En cuanto al hardware se tiene un diseño básico que se puede utilizar para crear nuevas aplicaciones sin embargo queda pendiente analizar el diseño para encontrar errores mecánicos y eléctricos y llevar a cabo las pruebas con nuestro diseño.
+
+\section{Trabajo a futuro}
+
+Debido a la complejidad de la arquitectura y la curva de aprendizaje que representó aprenderla, algunas metas no fueron cumplidas al 100%.
+
+Aunado a esto están las posibles funcionalidades que se le podrían dar al trabajo. A continuación se describen las posibilidades de trabajo a futuro que se pueden basar en este trabajo.
+
+\subsection{Corto plazo}
+
+Desarrollo de interfaz con pantalla Picaso OLED.
+
+En el simulador se ha programado un dispositivo que simula ser una pantalla Picaso, ésta pantalla brinda la facilidad de permitir almacenar imágenes y manejar la lógica de presentación de los programas de manera que se envíen comandos vía RS-232.
+
+Ejemplo:
+
+Si se envía el comando
+
+01 04
+
+La pantalla entenderá que deberá de dibujar un área de pixeles definida 4 pixeles más arriba
+
+02 06
+
+La pantalla entenderá que debe de dibujar la misma área de pixeles 6 pixeles más abajo.
+
+Se cuenta con una implementación de Linux de ARM en un hardware de OLIMEX, esta tarjeta permite conectar dispositivos a la UART, esta interfaz se podría trabajar para funcionar con mínimo esfuerzo.
+
+\subsection{Mediano plazo}
+
+Uno de los principales fines de este trabajo era crear la tarjeta que permitiera ejecutar los mismos binarios que el simulador, sin embargo la falta de tiempo, de conocimientos de la arquitectura y técnicas de creación de PCB's nos impidió culminar con esta meta.
+
+Para terminar este paso sería necesaria una revisión exhaustiva del diseño del PCB, imprimirlo y encontrar la forma de soldar. Adicionalmente hay que resolver un problema importante, lograr que la tarjeta sea modular para incluir los módulos que sean necesarios.
+
+El costo en tiempo y esfuerzo de construir esta tarjeta es, todavía significativo.
+
+\subsection{Largo plazo}
+
+Migración de L4 a la arquitectura ARM.
+
+El microkernel L4 dejó el soporte para ARM debido a que era poco usado en ese momento. El trabajo para migrarlo es aún significativo, se tiene la experiencia de haber realizado un trabajo similar en el sistema operativo Linux, sin embargo Linux ya tenía soporte para ARM, el trabajo únicamente se basa en modificar el mapa de memoria de acuerdo al dispositivo diseñado.
+
+En el caso de L4 el trabajo necesario es:
+
+Hacer el código compatible con el compilador y ensamblador utilizado (GCC, gas)
+Modificar el sistema de manejo de memoria.
+Modificar el sistema de manejo de interrupciones.
+Una vez teniendo el sistema completo se pueden llevar a cabo una gran cantidad de trabajos basándose en una arquitectura propia, que tiene las ventajas de permitir agregar y quitar dispositivos en tiempo de ejecución de una manera muy sencilla gracias al microkernel.
+
+En este momento éste trabajo sería significativo debido al auge que está teniendo el microprocesador ARM.
+
+\section{Discusion}
+
+A lo largo de la elaboración de este proyecto, nos encontramos con algunos problemas. Como en todos los proyectos existen situaciones que no se tienen planeadas o de las que no sabe las dimensiones hasta que se enfrenta con ellas. 
+
+En este trabajo se tuvieron algunas ideas que se querían abordar pero por situaciones adversas se dejaron de lado, tales ideas son las siguientes:
+
+\begin{itemize}
+\item La implementación del Picaso no se pudo adaptar al sistema.
+Esto presento un gran problema debido a que se planeaba conectar el sistema con un monito a través del Picaso y el FTDI, pero la reproducción de las imágenes se resultaba bastante lenta, por lo que se optó por no usar más.
+
+\item No hay una metodología para realizar el diseño de un dispositivo electrónico.
+En realidad, existen muy poca información de como realizar correctamente el diseño de un dispositivo electrónico, si bien debe de haber una forma, no se encuentra al alcance para las personas que lo deseen realizar con ya algunos conocimientos. 
+
+Esto hizo que la parte de la investigación fuera más extensa, obligando a recorrer los tiempos para el desarrollo del sistema, lo cual se vio reflejado en un sistema mínimo solo en el diseño.
+
+\item La implementación del dispositivo MMU y el DMA generaban complicación al diseño ya hecho.
+
+Ya se había realizado un diseño que era por demás complejo y agregar la conexión de estos dispositivos generaba una series de cambios que iban a repercutir en más tiempo de diseño.
+
+Sin embargo, también la idea es que el sistema fuera un sistema minímo por lo tanto la MMU y el DMA no podían estar en diseño.
+
+\end{itemize}
+
+\section{Conclusiones}
+
+Después de la elaboración de este proyecto pudimos llegar a las siguientes conclusiones.
+
+\begin{itemize}
+\item No existe una metología que permita diseñar un dispositivo electrónico hasta su finalización, sin embargo realizo el diseño del mismo.
+\item La simulación de la MMU es complejo de incorporar.
+\item Es factible hacer un simulador con todas las características anteriores.
+\item Se necesita tener más tiempo para simular todos los controladores.
+\item Se tiene una API para juegos y una para dispositivos.
+\item Se pueden realizar aplicaciones de manera sencilla.
+\end{itemize}
+
+

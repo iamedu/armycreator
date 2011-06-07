@@ -1,0 +1,97 @@
+\chapter{ARM Linux}\label{ch:arm_linux}
+
+Linux es un kernel que facilita el desarrollo, al abstraer la lógica de la máquina. La gran ventaja de linux es que es un kernel que se ha adaptado a una gran variedad de arquitecturas, entre las arquitecturas a las que se ha portado están:
+
+\begin{itemize}
+\item x86
+\item AMD
+\item ARM
+\item SPARC
+\end{itemize}
+
+Debido a que Linux está portado a la arquitectura ARM, el trabajo de portarlo a una nueva tarjeta se simplifica mucho, en este capítulo discutiremos esto.
+
+Esta investigación se hizo mientras se diseñaba la tarjeta, sin embargo las pruebas se hicieron con una tarjeta fabricada por \textbf{OLIMEX}, los cuales ya han hecho sus cambios al kernel de linux, fueron aceptados e inclusive se pueden descargar en la distribución oficial de Linux.
+
+\section{Prerrequisitos}
+
+Para llevar a cabo el desarrollo es necesario tener instalado el compilador y la biblioteca estándar de C. Se especifíca como lograr esto en el apéndice \ref{ch:toolchain}.
+
+La mayoría de los fabricantes proveen un cargador de arranque con sus sistemas mínimos, generalmente uBoot, por lo que su instalación no se discute en esta sección, sin embargo es importante que se cuente con un cargador de arranque.
+
+\section{Adecuaci\'on y compilaci\'on de kernel de linux}
+
+Una vez que se han cumplido los prerequisitos es necesario seguir el siguiente procedimiento:
+
+\subsection{Obtener el c\'odigo del kernel.}
+
+El código del kernel se encuentra en http://kernel.org, desde aquí se recomienda descargar la versión estable más actual.
+
+Al momento de escribir éste documento, la última version estable es la 2.6.33, la cual se puede descargar de \emph{http://www.kernel.org/pub/linux/kernel/v2.6/linux-2.6.33.3.tar.bz2}.
+
+\subsection{Compilar el kernel.}
+
+Una vez teniendo el kernel debemos proceder a compilarlo para hacer esto hay que ejecutar el siguiente comando.
+
+\begin{verbatim}
+tar xfvj linux-2.6.33.3.tar.bz2
+make menuconfig (En este paso se debe
+                 de tener cuidado con seleccionar los 
+                 parámetros adecuados de acuerdo al procesador)
+make 
+make modules
+\end{verbatim}
+
+Si se pudo compilar adecuadamente se deberá de tener el kernel compilado.
+
+\subsection{Modificar el c\'odigo para agregar funcionalidad de la tarjeta}
+
+El código de la tarjeta se encuentra en la carpeta \emph{arch/arm}, aquí se encuentra una carpeta para cada uno de los procesadores comunes, utilizemos como ejemplo el procesador \textbf{at91} que se ha usado extensivamente en este trabajo. La carpeta para este procesador es \emph{arch/arm/mach-at91}.
+
+En esta carpeta se encuentran los archivos de \emph{código} y \emph{headers} comúnes para el microprocesador. Aquí podemos encontrar varios archivos que inician con board- para soportar una nueva tarjeta se tiene que crear uno de estos archivos, en este caso el archivo de la tarjeta Olimex SAM9260 es board-sam9-l9260.c, que se incluye con el código fuente del proyecto.
+
+Esta sección dependerá mucho de la tarjeta que se desea fabricar, para modificar esta sección de código se debe de tener conocimientos necesarios sobre la tarjeta, en el caso de la tarjeta SAM9260 este código se encarga de las siguientes funciones:
+
+\begin{itemize}
+\item LEDS
+\item USART
+\item DBGU
+\item Interrupciones
+\item USB
+\item SPI
+\item Dataflash
+\item NAND
+\end{itemize}
+
+Un último detalle importante es la macro MACHINE\_START, ésta macro define como se inicializa la plataforma y contiene los siguientes parámetros:
+
+\begin{itemize}
+\item \emph{.phys\_io} Dirección física de los dispositivos (entrada, salida)
+\item \emph{.io\_pg\_offst} Es el offset de la tabla de página 	para mapear el espacio de entrada salida.
+\item \emph{.io\_pg\_offst} Es el offset de la tabla de página 	para mapear el espacio de entrada salida.
+\item \emph{.boot\_params} Se refiere a la localidad de memoria donde el bootloader dejó los parametros de configuración.
+\item \emph{.timer} Es la dirección de memoria de la estructura que define las operaciónes de inicialización, inicio y pausado del reloj principal.
+\item \emph{.map\_io} Es la dirección de memoria de la función que inicializa la entrada y salida de los dispositivos.
+\item \emph{.init\_irq} Es la dirección de memoria de la función que inicializa las interrupciónes del procesador.
+\item \emph{.init\_machine} Es la dirección de memoria de la función que inicializa la plataforma, agregando los dispositivos a la interfaz del dispositivo.
+\end{itemize}
+
+\subsection{Conectarlo al sistema principal de compilaci\'on.}
+
+Para poder compilar con make, hay que crear un archivo Kconfig con la siguiente sintaxis:
+
+\begin{verbatim}
+
+config MACH_SAM9_L9260
+	bool "Olimex SAM9-L9260 board"
+	depends on ARCH_AT91SAM9260
+	help
+	  Select this if you are using Olimex's SAM9-L9260 board based on the Atmel AT91SAM9260.
+	  <http://www.olimex.com/dev/sam9-L9260.html>
+
+\end{verbatim}
+
+Puede ser que sea necesario definir otros parametros dependiendo de la arquitectura para ello se puede visitar como referencia los archivo KConfig existentes en las otras plataformas, y el archivo kbuild/kbuild-language.txt
+
+Una vez hecho esto se tendrán los cambios necesario para ejecutar linux en una nueva plataforma.
+

@@ -1,0 +1,50 @@
+#include <controller.h>
+#include <lcd.h>
+
+void put_char(char c) {
+        char *ptr = (char *)0xfffff200;
+        *ptr = c;
+}
+
+void print_point(Point *p) {
+	if(p->x < 10 && p->x >= 0)
+	put_char('0' + p->x);
+	put_char(' ');
+	if(p->y < 10 && p->y >= 0)
+	put_char('0' + p->y);
+	put_char('\n');
+}
+
+void main() {
+	int joy1;
+	int joy2;
+	int lcd;
+	int r1;
+	int r2;
+	int obj;
+	int obj2;
+
+	lcd = initLCD();
+	joy1 = initControl(8587830272);
+	joy2 = initControl(8587830276);
+
+	obj = createObject(lcd, 1, 0, 0);
+	obj2 = createObject(lcd, 2, 0, 0);
+
+	Point *p;
+
+	setPosition(lcd, obj, 50, 50);
+
+	while(1) {
+		r1 = readControl(joy1);
+		r2 = readControl(joy2);
+		if(r1 >= 0 && r1 < 8) {
+			move(lcd, obj, r1);
+		}
+		if(r2 >= 0 && r2 < 8) {
+			move(lcd, obj2, r2);
+		}
+	}
+
+}
+

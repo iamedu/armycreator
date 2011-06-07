@@ -1,0 +1,69 @@
+\chapter{Herramientas de desarrollo ARM}\label{ch:toolchain}
+
+Para el trabajo en este proyecto es necesario tener el compilador, el ensamblador, y una biblioteca estándar de C en esta sección se explica como generar estas herramientas.
+
+Existen varias opciones para generar las herramientas de desarrollo de ARM, en este trabajo se buscó la manera más sencilla de hacerlo y se encontró la herramienta \textbf{crosstool-ng}. Ésta herramienta provee una manera de generar herramientas de desarrollo para las arquitecturas soportadas por \ac{GCC}.
+
+\section{crostool-NG}
+
+El siguiente es el procedimiento para instalar crostool-NG en Linux.
+
+\subsection{Prerrequisitos}
+
+\begin{itemize}
+\item \ac{GCC}
+\item Objective-C
+\item Autotools
+\item \ac{YACC}
+\item \ac{FLEX}
+\item Mercurial
+\end{itemize}
+
+\subsection{Instalaci\'on}
+
+\textbf{crostool-NG} se puede obtener desde el repositorio de Mercurial, de la siguiente forma:
+
+\begin{verbatim}
+
+hg clone http://ymorin.is-a-geek.org/hg/crosstool-ng
+
+\end{verbatim}
+
+Para compilarlo, se debe de ejecutar el siguiente procedimiento:
+
+\begin{verbatim}
+
+./configure --prefix=/dir/instalacion
+make
+make install
+export PATH="${PATH}:/dir/instalacion"
+cd /dir/instalacion
+ct-ng help
+ct-ng menuconfig
+ct-ng build
+
+\end{verbatim}
+
+\subsection{Uso}
+
+Crosstool tiene una interfaz intuitiva, con la que es posible configurar las herramientas que se desean utilizar, aquí se puede elegir lo que se desea el ambiente probado es el siguiente:
+
+\begin{itemize}
+\item binutils 2.20
+\item Compilador de C 4.4.3
+\item newlib 1.17.0
+\end{itemize}
+
+Para ejecutar la herramienta de configuración se debe de ejecutar el siguiente comando:
+
+\begin{verbatim}
+ct-ng menuconfig
+\end{verbatim}
+
+Con esto se abrirá el menú de configuración, y por último para compilarlo se deben de ejecutar los siguientes comandos:
+
+\begin{verbatim}
+make
+make install
+\end{verbatim}
+

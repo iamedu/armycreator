@@ -1,0 +1,10 @@
+This is the initial work for an L4 based microkernel for the ARM architecture.
+For now it is going to be tested under the x86 architecture.
+
+It is prohibited to use any linux kernel header (or any header that's not included with this project) in the project's headers.
+
+You can use any headers you want inside .c files BUT you must mark the to be removed with the following comment: /* TODO: REMOVE */ as in the following example:
+
+/* TODO: REMOVE */
+#include <stdio.h>
+
